@@ -1,18 +1,18 @@
-# 🧠 Braintheria — Decentralized Q&A with ETH Bounties
 
-Braintheria is a **decentralized Question & Answer platform** where users can post questions with an **ETH bounty**, and answerers compete to earn rewards.
+# 🧠 Braintheria — Decentralized Q&A with QIE Bounties
+
+Braintheria is a **decentralized Question & Answer platform** where users can post questions with a **QIE bounty**, and answerers compete to earn rewards.
 Unlike traditional Q&A platforms, Braintheria uses **smart contracts as trustless escrow**, ensuring transparent payouts without intermediaries.
 
-Built for a hackathon using **Ethereum Sepolia**, **Solidity**, **Next.js**, and **QIE (Indexer)** for fast on-chain data access and better UX.
-
+Built for a hackathon using **QIE Network**, **Solidity**, **Next.js**, and an optional backend for indexing and UX improvements.
 ---
 
 ## 🚩 Problem
 
-* High-quality technical answers are hard to incentivize
-* Existing Q&A platforms rely on centralized moderation and reputation
-* Payments and bounties require trust in a third party
-* Contributors are often under-rewarded for expert knowledge
+- High-quality technical answers are hard to incentivize
+- Existing Q&A platforms rely on centralized moderation and reputation
+- Payments and bounties require trust in a third party
+- Contributors are often under-rewarded for expert knowledge
 
 ---
 
@@ -20,12 +20,11 @@ Built for a hackathon using **Ethereum Sepolia**, **Solidity**, **Next.js**, and
 
 Braintheria introduces:
 
-* **ETH-backed bounties** locked in smart contracts
-* **Trustless payouts** to the selected best answer
-* **Asker-based validation** (the asker chooses the winner)
-* **Optional staking** to reduce spam and low-effort answers
-* **QIE-powered indexing** for fast reads without centralized custody
-* A clean Web3 UX without launching a custom token
+- **QIE-backed bounties** locked in smart contracts
+- **Trustless payouts** to the selected best answer
+- **Asker-based validation** (the asker chooses the winner)
+- **Optional staking** to reduce spam and low-effort answers
+- A clean Web3 UX without launching a custom token
 
 ---
 
@@ -33,11 +32,10 @@ Braintheria introduces:
 
 **Core components:**
 
-* **Smart Contract** — Escrow ETH, manage questions & payouts
-* **Frontend** — Wallet-based dApp (Next.js)
-* **QIE Indexer** — Indexes on-chain events for efficient querying & UX
-
-> All critical logic and funds remain **fully on-chain**. QIE is used only for data indexing and performance.
+- **Smart Contract** — Escrow QIE, manage questions & payouts
+- **Frontend** — Wallet-based dApp for users
+- **Backend (optional)** — Indexing, caching, and fast queries
+- **IPFS (optional)** — Store long question/answer content off-chain
 
 ---
 
@@ -56,8 +54,10 @@ Braintheria introduces:
 │   ├── components/
 │   └── lib/
 │
-├── qie/                    # QIE indexer config & handlers
-│   └── indexer.ts
+├── backend/                # (Optional) NestJS API
+│   ├── src/
+│   ├── prisma/
+│   └── README.md
 │
 ├── README.md               # Main project overview (this file)
 └── package.json            # Root scripts (if applicable)
@@ -67,31 +67,30 @@ Braintheria introduces:
 
 ## 🔗 Blockchain & Network
 
-* **Network:** Ethereum Sepolia (testnet)
-* **Asset:** ETH
-* **Wallets:** MetaMask / WalletConnect
-* **Tooling:** Foundry (Anvil, Forge)
-* **Indexer:** QIE
+- **Network:** QIE Network
+- **Asset:** QIE
+- **Wallets:** MetaMask / WalletConnect
+- **Tooling:** Foundry (Anvil, forge)
 
 ---
 
 ## 🔐 Reward Model (Summary)
 
-* Askers lock **ETH bounty** when posting a question
-* Answerers submit answers (optionally with a small ETH stake)
-* **Asker selects the best answer**
-* Smart contract releases **100% of the bounty** to the winner
-* Platform takes **0% fee**
+- Askers lock **QIE bounty** when posting a question
+- Answerers submit answers (optionally with a small QIE stake)
+- **Asker selects the best answer**
+- Smart contract releases **100% of the bounty** to the winner
+- Platform takes **0% fee**
 
 ---
 
 ## 🔒 Security Considerations (Summary)
 
-* Reentrancy protection on ETH transfers
-* One-time payout per question
-* Strict access control (only asker can resolve)
-* Immutable answers once submitted
-* Indexer has **no fund custody** and cannot affect payouts
+- Reentrancy protection on QIE transfers
+- One-time payout per question
+- Strict access control (only asker can resolve)
+- Immutable answers once submitted
+- No custom token = reduced attack surface
 
 > ⚠️ This project is a hackathon prototype and has not undergone a formal security audit.
 
@@ -115,19 +114,7 @@ forge script script/Deploy.s.sol:DeployScript \
 
 ---
 
-### 2️⃣ QIE Indexer
-
-```bash
-cd qie
-npm install
-npm run dev
-```
-
-> The indexer listens to contract events and powers fast queries for the frontend.
-
----
-
-### 3️⃣ Frontend
+### 2️⃣ Frontend
 
 ```bash
 cd frontend
@@ -137,16 +124,31 @@ npm run dev
 
 ---
 
+### 3️⃣ Backend (Optional)
+
+```bash
+cd backend
+npm install
+npm run start:dev
+```
+
+> The app can run **without the backend** for a pure on-chain demo.
+
+---
+
 ## 🛣️ Future Improvements
 
-* Deploy to low-fee L2 (Base / Polygon)
-* DAO or community-based answer validation
-* Reputation-based incentives
-* Formal smart contract audit
-* Dispute resolution & timeouts
-* Optional governance token (v2)
+- Deploy to low-fee L2 or other compatible networks
+- Add DAO or community voting
+- Introduce reputation-based incentives
+- Formal smart contract audit
+- Dispute resolution & timeouts
+- Optional governance token (v2)
+
+---
+
 ## 🏁 Hackathon Notes
 
-* Built with simplicity and security in mind
-* Focused on **real economic incentives**, not speculation
-* QIE used strictly for **scalability & UX**, not trust
+- Built with simplicity and security in mind
+- Focused on **real economic incentives**, not speculation
+- Designed for extensibility beyond the hackathon
