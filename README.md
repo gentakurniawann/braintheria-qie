@@ -131,9 +131,6 @@ cd backend
 npm install
 npm run start:dev
 ```
-
-> The app can run **without the backend** for a pure on-chain demo.
-
 ---
 
 ## 🛣️ Future Improvements
