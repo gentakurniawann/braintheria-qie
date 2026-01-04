@@ -14,6 +14,6 @@ export class LedgerService {
     ref?: string;
     txHash?: string;
   }) {
-    return this.prisma.ledger.create({ data: { token: 'ETH', ...data } });
+    return this.prisma.ledger.create({ data: { token: 'BRAIN', ...data } });
   }
 }

@@ -91,17 +91,17 @@ export class AuthController {
     let walletBalance: {
       address: string;
       wei: string;
-      eth: string;
+      qie: string;
     } | null = null;
 
     if (user.primaryWallet) {
       const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
       const balanceWei = await provider.getBalance(user.primaryWallet);
-      const balanceEth = ethers.formatEther(balanceWei);
+      const balanceQie = ethers.formatEther(balanceWei);
       walletBalance = {
         address: user.primaryWallet,
         wei: balanceWei.toString(),
-        eth: balanceEth,
+        qie: balanceQie,
       };
     }
 

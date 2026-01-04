@@ -40,6 +40,6 @@ export class InternalController {
     },
   ) {
     // You can route to LedgerService here if preferred
-    return this.prisma.ledger.create({ data: { token: 'ETH', ...body } });
+    return this.prisma.ledger.create({ data: { token: 'BRAIN', ...body } });
   }
 }

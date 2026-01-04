@@ -42,14 +42,14 @@ export class ChainReadService implements OnModuleInit {
   }
 
   /**
-   * Get user's ETH balance (as string, in ETH)
+   * Get user's QIE balance (as string, in QIE)
    */
-  async getEthBalance(address: string): Promise<string> {
+  async getQieBalance(address: string): Promise<string> {
     try {
       const balance = await this.provider.getBalance(address);
       return ethers.formatEther(balance);
     } catch (error) {
-      console.error(`[ChainReadService] Failed to fetch ETH balance:`, error);
+      console.error(`[ChainReadService] Failed to fetch QIE balance:`, error);
       return '0';
     }
   }
@@ -91,7 +91,7 @@ export class ChainReadService implements OnModuleInit {
   }
 
   /**
-   *Get contract’s ETH balance (to monitor bounty pool)
+   * Get contract's QIE balance (to monitor bounty pool)
    */
   async getContractBalance(): Promise<string> {
     try {
