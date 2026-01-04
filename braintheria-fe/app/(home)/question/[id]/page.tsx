@@ -1,12 +1,12 @@
 'use client';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useQueryStates, parseAsInteger } from 'nuqs';
 
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Coins, EllipsisVertical, Plus } from 'lucide-react';
+import { EllipsisVertical, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import AnswerDialog from '@/components/global/dialog/answer';
@@ -14,6 +14,7 @@ import Leaderboard from '@/components/global/section/leaderboard';
 import QuestionDialog from '@/components/global/dialog/question';
 import TooltipBadge from '@/components/global/badge/tooltip-badge';
 import { PaginationCompo } from '@/components/ui/pagination';
+import Faucet from '@/components/global/section/faucet';
 
 import useQuestion from '@/stores/menu/question';
 import { useParams } from 'next/navigation';
@@ -33,6 +34,7 @@ import {
 
 import useTheme from '@/stores/theme';
 import useAuth from '@/stores/auth';
+import { IQuestion } from '@/types/menu/question';
 
 export default function Question() {
   const router = useRouter();
@@ -40,6 +42,8 @@ export default function Question() {
   const { setModalSuccess, setModalDelete } = useTheme();
   const { setModalAnswer, modalAnswer } = useQuestion();
   const { setModalQuestion } = useTheme();
+
+  const [editingQuestion, setEditingQuestion] = useState<IQuestion | null>(null);
 
   const [get, set] = useQueryStates({
     page: parseAsInteger.withDefault(1),
@@ -121,11 +125,18 @@ export default function Question() {
                 <TooltipBadge status={question?.status as 'Open' | 'Verified' | 'Cancelled'} />
 
                 <Badge variant={'default'}>
-                  <Coins className="w-3 h-3" />
-                  {question?.bountyAmountWei && !isNaN(Number(question.bountyAmountWei))
-                    ? (Number(question.bountyAmountWei) / 1e18).toFixed(4)
-                    : '0.0000'}{' '}
-                  <span className="hidden lg:block">QIE</span>
+                  <p className="flex items-center gap-1 text-xs font-normal">
+                    <Image
+                      src="/images/brain-coin.png"
+                      alt="brain-coin"
+                      width={20}
+                      height={20}
+                    />
+                    {question?.bountyAmountWei && !isNaN(Number(question.bountyAmountWei))
+                      ? Number(question.bountyAmountWei) / 1e18
+                      : 0}{' '}
+                  </p>
+                  <span className="hidden lg:block">BRAIN</span>
                 </Badge>
                 {question?.isAuthor && question?.status === 'Open' && (
                   <DropdownMenu>
@@ -135,6 +146,7 @@ export default function Question() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
                         onClick={() => {
+                          setEditingQuestion(question); // Set to edit mode
                           setModalQuestion(true);
                         }}
                       >
@@ -272,7 +284,13 @@ export default function Question() {
 
               <Separator className="my-4" />
               <div className="flex flex-row gap-2 items-center mb-4">
-                <div className="w-10 h-10 rounded-full bg-blue-300" />
+                <Image
+                  src={'/images/unavailable-profile.png'}
+                  alt={'unavailable-profile'}
+                  className="w-10 h-10 rounded-full"
+                  width={40}
+                  height={40}
+                />
                 <div>
                   <span className="text-sm font-medium">{answer.author.name}</span>
                   <p className="text-xs font-normal text-slate-500">
@@ -306,14 +324,20 @@ export default function Question() {
         </div>
       </div>
       <div className="col-span-12 lg:col-span-3">
-        <Leaderboard />
+        <div className="flex flex-col gap-6">
+          <Leaderboard />
+          <Faucet />
+        </div>
       </div>
       <AnswerDialog
         answer={modalAnswer?.answer}
         question={question?.bodyMd || ''}
         questionId={Number(question?.id)}
       />
-      <QuestionDialog questionToEdit={question} />
+      <QuestionDialog
+        questionToEdit={editingQuestion}
+        onClose={() => setEditingQuestion(null)}
+      />
     </div>
   );
 }

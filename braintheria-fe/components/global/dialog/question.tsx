@@ -1,13 +1,19 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import * as z from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useAccount, useBalance } from 'wagmi';
+import {
+  useAccount,
+  useBalance,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from 'wagmi';
+import { parseEther, maxUint256 } from 'viem';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form } from '@/components/ui/form';
-import { Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -16,6 +22,32 @@ import { CustomField } from '@/components/ui/form-field';
 import { Text as TextInput } from '@/components/ui/text';
 import { useCreateQuestion, useUpdateQuestion } from '@/hooks/menu/question';
 import { IQuestionPayload } from '@/types/menu/question';
+import { BRAIN_TOKEN_ADDRESS, QNA_CONTRACT_ADDRESS } from '@/lib/chains/qie-testnet';
+import BrainBalance from '@/components/brain-balance';
+import { toast } from 'sonner';
+
+// ERC20 ABI for allowance and approve
+const ERC20_ABI = [
+  {
+    name: 'allowance',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' },
+    ],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'approve',
+    type: 'function',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ type: 'bool' }],
+  },
+] as const;
 
 export const makeQuestionFormSchema = (userBalance: number) =>
   z.object({
@@ -24,12 +56,15 @@ export const makeQuestionFormSchema = (userBalance: number) =>
     bounty: z
       .string()
       .nonempty('Please insert bounty')
-      // .refine((val) => /^[0-9]*\.?[0-9]+$/.test(val), {
-      //   message: 'Bounty must be a valid number',
-      // })
-      // .refine((val) => parseFloat(val) <= userBalance, {
-      //   message: `Bounty cannot exceed your wallet balance (${userBalance} QIE)`,
-      // }),
+      .refine((val) => /^[0-9]+$/.test(val), {
+        message: 'Bounty must be a whole number',
+      })
+      .refine((val) => parseInt(val) >= 10, {
+        message: 'Minimum bounty is 10 BRAIN',
+      })
+      .refine((val) => parseInt(val) <= userBalance, {
+        message: `Bounty cannot exceed your wallet balance (${Math.floor(userBalance)} BRAIN)`,
+      }),
   });
 
 interface QuestionDialogProps {
@@ -39,14 +74,44 @@ interface QuestionDialogProps {
     bodyMd: string;
     bountyAmountWei?: string;
   } | null;
+  onClose?: () => void; // Callback when dialog closes
 }
 
-export default function QuestionDialog({ questionToEdit }: QuestionDialogProps) {
+export default function QuestionDialog({ questionToEdit, onClose }: QuestionDialogProps) {
   const { modalQuestion, setModalQuestion, setModalSuccess } = useTheme();
   const { address } = useAccount();
-  const { data: userBalance } = useBalance({ address });
+  const [step, setStep] = useState<'idle' | 'approving' | 'submitting'>('idle');
+  const [pendingFormData, setPendingFormData] = useState<z.infer<
+    ReturnType<typeof makeQuestionFormSchema>
+  > | null>(null);
 
-  const balanceValue = parseFloat(userBalance?.formatted || '0');
+  // Use BRAIN token balance
+  const { data: brainBalance } = useBalance({
+    address,
+    token: BRAIN_TOKEN_ADDRESS as `0x${string}`,
+  });
+
+  // Check current allowance
+  const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
+    address: BRAIN_TOKEN_ADDRESS as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: address ? [address, QNA_CONTRACT_ADDRESS as `0x${string}`] : undefined,
+  });
+
+  // Write contract hooks for approve
+  const {
+    writeContract: writeApprove,
+    data: approveTxHash,
+    isPending: isApprovePending,
+  } = useWriteContract();
+
+  // Wait for approve transaction
+  const { isSuccess: isApproveConfirmed } = useWaitForTransactionReceipt({
+    hash: approveTxHash,
+  });
+
+  const balanceValue = parseFloat(brainBalance?.formatted || '0');
   const questionFormSchema = makeQuestionFormSchema(balanceValue);
 
   const form = useForm<z.infer<typeof questionFormSchema>>({
@@ -58,23 +123,41 @@ export default function QuestionDialog({ questionToEdit }: QuestionDialogProps) 
     },
   });
 
-  const { mutate: createQuestion } = useCreateQuestion();
-  const { mutate: updateQuestion } = useUpdateQuestion(questionToEdit?.id?.toString() || '');
+  const { mutate: createQuestion, isPending: isCreating } = useCreateQuestion();
+  const { mutate: updateQuestion, isPending: isUpdating } = useUpdateQuestion(questionToEdit?.id?.toString() || '');
 
   const isEditing = !!questionToEdit;
 
-  const onSubmit = async (data: z.infer<typeof questionFormSchema>) => {
+  // Check if approval is needed
+  const checkAllowanceAndSubmit = (bountyWei: bigint) => {
+    const allowance = currentAllowance ? BigInt(currentAllowance.toString()) : BigInt(0);
+    if (allowance >= bountyWei) {
+      // Already approved, submit directly
+      submitToBackend();
+    } else {
+      // Need approval first
+      setStep('approving');
+      writeApprove({
+        address: BRAIN_TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [QNA_CONTRACT_ADDRESS as `0x${string}`, maxUint256],
+      });
+    }
+  };
+
+  // Submit to backend after approval
+  const submitToBackend = () => {
+    if (!pendingFormData) return;
+
+    setStep('submitting');
     const payload: IQuestionPayload = {
-      title: data.title,
-      bodyMd: data.bodyMd,
-      bounty: data.bounty,
-      token: 'QIE',
+      title: pendingFormData.title,
+      bodyMd: pendingFormData.bodyMd,
+      bounty: pendingFormData.bounty,
     };
 
-    if (isEditing && questionToEdit) {
-      await updateQuestion({ id: questionToEdit.id.toString(), ...payload });
-    } else {
-      createQuestion(payload, {
+    createQuestion(payload, {
       onSuccess: () => {
         setModalSuccess({
           title: 'Question Submitted',
@@ -83,11 +166,59 @@ export default function QuestionDialog({ questionToEdit }: QuestionDialogProps) 
           animation: 'success',
         });
         form.reset();
+        setModalQuestion(false);
+        setStep('idle');
+        setPendingFormData(null);
+      },
+      onError: (error) => {
+        console.error('Submission failed:', error);
+        alert(error instanceof Error ? error.message : 'Failed to submit question');
+        setStep('idle');
+        setPendingFormData(null);
       },
     });
+  };
+
+  // Handle approval confirmation
+  useEffect(() => {
+    if (isApproveConfirmed && step === 'approving' && pendingFormData) {
+      // Refresh allowance and submit
+      refetchAllowance();
+      submitToBackend();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isApproveConfirmed, step, pendingFormData]);
+
+  const onSubmit = async (data: z.infer<typeof questionFormSchema>) => {
+    if (isEditing && questionToEdit) {
+      // For editing, include bounty in payload
+      const payload: IQuestionPayload = {
+        title: data.title,
+        bodyMd: data.bodyMd,
+        bounty: data.bounty, // Include bounty for update
+        id: questionToEdit.id.toString(),
+      };
+      updateQuestion(payload, {
+        onSuccess: () => {
+          toast.success('Question updated successfully');
+          form.reset();
+          setModalQuestion(false);
+          setStep('idle');
+          setPendingFormData(null);
+        },
+        onError: (error) => {
+          console.error('Update failed:', error);
+          alert(error instanceof Error ? error.message : 'Failed to update question');
+          setStep('idle');
+          setPendingFormData(null);
+        },
+      });
     }
 
-    setModalQuestion(false);
+    // For new questions, check allowance and approve if needed
+    const bountyWei = parseEther(data.bounty);
+    setPendingFormData(data);
+    checkAllowanceAndSubmit(bountyWei);
   };
 
   useEffect(() => {
@@ -97,13 +228,39 @@ export default function QuestionDialog({ questionToEdit }: QuestionDialogProps) 
         bodyMd: questionToEdit.bodyMd,
         bounty: (Number(questionToEdit.bountyAmountWei) / 1e18).toString(),
       });
+    } else {
+      // Reset to empty values for new question
+      form.reset({
+        title: '',
+        bodyMd: '',
+        bounty: '',
+      });
     }
   }, [questionToEdit, form]);
+
+  const isLoading = step !== 'idle' || isApprovePending || isCreating || isUpdating;
+
+  const getButtonText = () => {
+    if (isEditing) return 'Save Changes';
+    if (isApprovePending) return 'Approve in Wallet...';
+    if (step === 'approving') return 'Approving...';
+    if (step === 'submitting' || isCreating) return 'Submitting...';
+    return 'Submit Question';
+  };
 
   return (
     <Dialog
       open={modalQuestion}
-      onOpenChange={setModalQuestion}
+      onOpenChange={(open) => {
+        setModalQuestion(open);
+        if (!open) {
+          // Reset form and call onClose when dialog closes
+          form.reset({ title: '', bodyMd: '', bounty: '' });
+          setStep('idle');
+          setPendingFormData(null);
+          onClose?.();
+        }
+      }}
     >
       <DialogContent className="!max-w-3xl">
         <DialogHeader>
@@ -134,32 +291,34 @@ export default function QuestionDialog({ questionToEdit }: QuestionDialogProps) 
                   />
                 )}
               />
-              <div className="flex flex-row justify-between items-center">
-                <div className="flex flex-row gap-2 items-center">
+              <div className="flex flex-row justify-between items-start">
+                <div className="flex flex-row gap-2 items-start">
                   <CustomField
                     name="bounty"
                     control={form.control}
                     render={({ field }) => (
                       <TextInput
-                        placeholder="Write Bounty eg. 0.1"
+                        placeholder="Write Bounty eg. 10"
                         {...field}
+                        onChange={(e) => {
+                          // Only allow integers
+                          const value = e.target.value.replace(/[^0-9]/g, '');
+                          field.onChange(value);
+                        }}
+                        disabled={isLoading}
                       />
                     )}
                   />
-                  <div>
-                    <Coins className="inline-block mr-1 w-6 h-6 text-primary" />
-                    <span className="text-xs text-primary font-normal">
-                      you have {balanceValue.toFixed(4)} coins now
-                    </span>
-                  </div>
+                  <BrainBalance />
                 </div>
 
                 <Button
                   type="submit"
                   variant="default"
                   size={'lg'}
+                  disabled={isLoading}
                 >
-                  {isEditing ? 'Save Changes' : 'Submit Question'}
+                  {getButtonText()}
                 </Button>
               </div>
             </div>

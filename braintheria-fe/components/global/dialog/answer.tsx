@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import useTheme from '@/stores/theme';
 import useQuestion from '@/stores/menu/question';
 import { useCreateAnswer, useUpdateAnswer } from '@/hooks/menu/question';
-import { updateAnswer } from '@/services/menu/question';
 
 interface IAnswerDialogProps {
   answer: {
@@ -43,8 +42,10 @@ export default function AnswerDialog({ answer, question, questionId }: IAnswerDi
     },
   });
 
-  const { mutate: createAnswer } = useCreateAnswer(questionId.toString());
-  const { mutate: updateAnswer } = useUpdateAnswer(questionId);
+  const { mutate: createAnswer, isPending: createAnswerLoading } = useCreateAnswer(
+    questionId.toString(),
+  );
+  const { mutate: updateAnswer, isPending: updateAnswerLoading } = useUpdateAnswer(questionId);
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -116,8 +117,9 @@ export default function AnswerDialog({ answer, question, questionId }: IAnswerDi
               <Button
                 variant="default"
                 size={'lg'}
+                disabled={createAnswerLoading || updateAnswerLoading}
               >
-                {isEditing ? 'Add' : 'Edit'} Your Answer
+                {!isEditing ? 'Add' : 'Edit'} Your Answer
               </Button>
             </div>
           </form>
