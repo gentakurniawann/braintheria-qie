@@ -1,5 +1,3 @@
-Here's the updated technical decisions document with BRAIN token:
-
 ---
 
 # Technical Decisions
