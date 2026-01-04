@@ -73,7 +73,7 @@ export default function HomeLayout({
       </div>
       <Navbar />
       <main
-        className={`min-h-screen p-2 sm:p-6 lg:p-12 ${!token ? '!pb-0' : ''} relative z-10 !text-blue-950 pt-24 sm:pt-28 lg:pt-32 max-w-[1440px] mx-auto`}
+        className={`min-h-screen p-2 sm:p-6 lg:p-12 ${!token && pathname === '/' ? '!pb-0' : ''} relative z-10 !text-blue-950 pt-24 sm:pt-28 lg:pt-32 max-w-[1440px] mx-auto`}
       >
         {children}
       </main>
