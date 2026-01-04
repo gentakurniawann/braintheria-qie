@@ -39,6 +39,14 @@ export class AnswersService {
     if (question.status !== 'Open')
       throw new BadRequestException('You can only answer open questions.');
 
+    // --- Get user's wallet address ---
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { primaryWallet: true },
+    });
+    if (!user?.primaryWallet)
+      throw new BadRequestException('User wallet address not found.');
+
     // --- Prepare IPFS data ---
     const contentHash = this.hashing.computeContentHash(dto.bodyMd);
     const pinned = await this.ipfs.pinJson({
@@ -65,32 +73,19 @@ export class AnswersService {
       );
 
     try {
-      //  Call contract postAnswer(questionId, contentHash)
-      const tx = await this.signerService.answerQuestion(
-        question.chainQId,
-        contentHash,
-      );
-
-      const receipt = await tx.wait();
-      // console.log(' Answer posted on-chain:', receipt.hash);
-
-      // --- Extract the event AnswerPosted(answerId) ---
-      const event = receipt.logs
-        .map((log) => {
-          try {
-            return this.signerService.contract.interface.parseLog(log);
-          } catch {
-            return null;
-          }
-        })
-        .find((parsed) => parsed && parsed.name === 'AnswerPosted');
-
-      const chainAId = event?.args?.answerId?.toString();
+      // Call contract answerQuestionOnBehalf - records user's wallet as answerer
+      const uri = `ipfs://${pinned.cid}`;
+      const { tx, receipt, chainAId } =
+        await this.signerService.answerQuestionOnBehalf(
+          user.primaryWallet, // User's wallet - will receive bounty on validation
+          question.chainQId,
+          uri,
+        );
 
       // --- Update DB with chainAId ---
       await this.prisma.answer.update({
         where: { id: answer.id },
-        data: { chainAId: chainAId ? Number(chainAId) : null },
+        data: { chainAId: chainAId ?? null },
       });
 
       // --- Publish event for live updates ---
@@ -98,12 +93,12 @@ export class AnswersService {
 
       return {
         success: true,
-        message: ' Answer created successfully and synced to blockchain.',
+        message: 'Answer created successfully and synced to blockchain.',
         data: {
           id: answer.id,
           questionId: qId,
           chainAId,
-          txHash: receipt.hash,
+          txHash: tx.hash,
           ipfsCid: pinned.cid,
         },
       };
