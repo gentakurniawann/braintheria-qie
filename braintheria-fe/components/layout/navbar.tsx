@@ -122,8 +122,8 @@ export default function Navbar() {
                 </DropdownMenuItem>
                 <Separator className="my-1" />
                 <DropdownMenuItem
-                  onClick={() => {
-                    logout();
+                  onClick={async () => {
+                    await logout();
                     router.push('/');
                     window.location.reload();
                   }}

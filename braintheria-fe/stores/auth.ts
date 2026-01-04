@@ -67,8 +67,10 @@ const useAuth = create<IAuthStore>((set, get) => ({
   },
   logout: async () => {
     try {
-      deleteCookie('token');
-      deleteCookie('user');
+      await deleteCookie('token');
+      await deleteCookie('user');
+      
+      set({ token: '', user: null });
     } catch (error) {
       console.error('Error store logout:', error);
       throw error;
