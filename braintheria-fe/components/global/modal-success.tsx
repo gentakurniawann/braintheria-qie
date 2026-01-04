@@ -36,7 +36,7 @@ function ModalSuccess() {
   return (
     <Dialog
       open={modalSuccess.open}
-      onOpenChange={() => handleAction}
+      onOpenChange={() => setModalSuccess({ ...modalSuccess, open: false })}
     >
       <DialogContent className="sm:max-w-[425px]">
         <Player

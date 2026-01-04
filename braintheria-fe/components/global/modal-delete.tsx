@@ -30,7 +30,11 @@ export default function ModalDelete() {
   return (
     <Dialog
       open={modalDelete.open}
-      onOpenChange={() => handleAction}
+      onOpenChange={() =>
+        setModalDelete({
+          open: false,
+        })
+      }
     >
       <DialogContent className="sm:max-w-[425px] flex flex-col justify-center items-center gap-4">
         <Player
@@ -48,29 +52,13 @@ export default function ModalDelete() {
               'Are you sure you want to delete this data? This action cannot be undone.'}
           </p>
         </div>
-        <div className="flex justify-between gap-3 w-full">
-          <Button
-            onClick={() =>
-              setModalDelete({
-                open: false,
-                title: '',
-                message: '',
-                action: () => {},
-              })
-            }
-            className="w-1/2"
-            variant="outline"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => handleAction()}
-            className='w-1/2'
-            variant={'destructive'}
-          >
-            Delete
-          </Button>
-        </div>
+        <Button
+          onClick={() => handleAction()}
+          className="w-full"
+          variant={'destructive'}
+        >
+          Delete
+        </Button>
       </DialogContent>
     </Dialog>
   );
