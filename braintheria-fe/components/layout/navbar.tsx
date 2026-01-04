@@ -13,7 +13,9 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Separator } from '../ui/separator';
-import { Search, UserCircle2 } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+import { Coins, Search, UserCircle2 } from 'lucide-react';
+import BrainBalance from '../brain-balance';
 
 import useAuth from '@/stores/auth';
 import useTheme from '@/stores/theme';
@@ -23,7 +25,7 @@ export default function Navbar() {
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const { token, logout } = useAuth();
-  const { setModalQuestion } = useTheme();
+  const { setModalQuestion, setModalSwapToken } = useTheme();
 
   const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
@@ -93,32 +95,55 @@ export default function Navbar() {
           </div>
         )}
         {token ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <UserCircle2 className="w-8 h-8 text-blue-950 cursor-pointer" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  router.push('/profile');
-                }}
-              >
-                Profile
-              </DropdownMenuItem>
-              <Separator className="my-1" />
-              <DropdownMenuItem
-                onClick={() => logout()}
-                className="!text-red-500"
-              >
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex flex-row items-center gap-2">
+            <BrainBalance />
+            <Tooltip>
+              <TooltipTrigger>
+                <Coins
+                  className="w-8 h-8 text-blue-950 cursor-pointer hover:scale-105 transition-transform duration-200"
+                  onClick={() => setModalSwapToken(true)}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Swap Token</p>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenu>
+              <DropdownMenuTrigger>
+                <UserCircle2 className="w-8 h-8 text-blue-950 cursor-pointer hover:scale-105 transition-transform duration-200" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    router.push('/profile');
+                  }}
+                >
+                  Profile
+                </DropdownMenuItem>
+                <Separator className="my-1" />
+                <DropdownMenuItem
+                  onClick={() => {
+                    logout();
+                    router.push('/');
+                    window.location.reload();
+                  }}
+                  className="!text-red-500"
+                >
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ) : (
           <div>
             <ul>
               <li>
-                <Link href="/auth/sign-in">Sign In</Link>
+                <Link
+                  href="/auth/sign-in"
+                  className="hover:scale-105 transition-transform duration-200 text-blue-950"
+                >
+                  Sign In
+                </Link>
               </li>
             </ul>
           </div>
