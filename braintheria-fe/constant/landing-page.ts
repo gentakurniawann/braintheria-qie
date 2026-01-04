@@ -1,4 +1,13 @@
-import { BadgeQuestionMark, NotebookPen, ShieldQuestionMark, Coins } from 'lucide-react';
+import {
+  BadgeQuestionMark,
+  NotebookPen,
+  ShieldQuestionMark,
+  Coins,
+  Wallet,
+  ArrowRightLeft,
+  Gift,
+  Lock,
+} from 'lucide-react';
 
 export const features = [
   {
@@ -19,18 +28,55 @@ export const features = [
   },
 ];
 
+// BRAIN Token Section
+export const brainToken = {
+  title: 'BRAIN Token',
+  subtitle: 'The native utility token powering the Braintheria ecosystem',
+  description:
+    'BRAIN is an ERC-20 token on the QIE network that enables trustless knowledge exchange. It serves as the primary currency for bounties, rewards, and governance.',
+  features: [
+    {
+      icon: Gift,
+      title: 'Free Faucet',
+      description:
+        'New users can claim free BRAIN tokens from our faucet to get started immediately.',
+    },
+    {
+      icon: ArrowRightLeft,
+      title: 'Easy Swap',
+      description: 'Swap QIE to BRAIN directly in the platform. No external exchanges needed.',
+    },
+    {
+      icon: Lock,
+      title: 'Secure Escrow',
+      description:
+        'Bounties are locked in smart contracts until answers are approved. Fully trustless.',
+    },
+    {
+      icon: Wallet,
+      title: 'Your Wallet',
+      description: 'Earnings go directly to your wallet. No platform holds your funds.',
+    },
+  ],
+  howItWorks: [
+    { step: '1', title: 'Get BRAIN', description: 'Claim from faucet or swap QIE' },
+    { step: '2', title: 'Ask or Answer', description: 'Attach bounties or provide solutions' },
+    { step: '3', title: 'Earn Rewards', description: 'Get paid when answers are approved' },
+  ],
+};
+
 export const advantages = {
   todaysqna: [
-    'Answers generate traffic and ad revenue but contributors earn nothing.',
-    'Centralized algorithms decide what’s visible.',
-    'High-quality answers get buried; niche expertise is undervalued.',
-    'Users don’t own their content or reputation.',
+    '❌ Contributors earn nothing - platforms profit from your answers.',
+    '❌ No real incentives - upvotes and badges have no monetary value.',
+    '❌ Centralized control - platform decides visibility and moderation.',
+    '❌ No ownership - your reputation stays locked in one platform.',
   ],
   braintheria: [
-    '💰 Fair compensation: Askers attach ETH bounties to questions.',
-    '🔍 Transparent outcomes: Payouts and answer approvals are on-chain.',
-    '🧾 Content ownership: IPFS + smart contracts → verifiable, censorship-resistant history.',
-    '⚖ Community-aligned incentives: Value is shared with contributors, not just the platform.',
+    '💰 Earn BRAIN tokens directly to your wallet for accepted answers.',
+    '🎁 Free to start - claim tokens from faucet or swap QIE instantly.',
+    '🔒 Trustless escrow - bounties locked in smart contracts, not our wallet.',
+    '📊 On-chain reputation - all contributions verifiable on blockchain.',
   ],
 };
 
@@ -49,29 +95,34 @@ export const users = [
 
 export const faqs = [
   {
-    question: 'Do I need crypto knowledge to use Braintheria?',
+    question: 'What is BRAIN token?',
     answer:
-      'Not deeply. As a learner, you can sign in with Google, top up a wallet, and attach small bounties to your questions without needing to know all the technical details. If you’re more crypto-native, you still get full control: you connect your own wallet, manage your funds, and track every transaction on-chain.',
+      'BRAIN is the native ERC-20 utility token of Braintheria, built on the QIE network. It powers the entire knowledge exchange ecosystem - used for bounties, rewards, and incentivizing quality answers. When you ask a question, you attach BRAIN as a bounty. When your answer is accepted, you earn BRAIN directly to your wallet.',
   },
   {
-    question: 'How do bounties and payments work?',
+    question: 'How do bounties work?',
     answer:
-      'When you ask a question, you attach a bounty in ETH that gets locked in a smart contract. Once you mark an answer as accepted, the contract automatically releases the bounty to the answerer. This flow is trustless: Braintheria doesn’t “manually” move your funds and the contract does it based on clear rules.',
+      'When you ask a question, you attach a BRAIN bounty (minimum 10 BRAIN). This bounty is locked in a smart contract - not held by Braintheria. Once you approve an answer, the contract automatically releases the bounty to the answerer. The entire flow is trustless and verifiable on-chain.',
+  },
+  {
+    question: 'Do I need crypto experience to use Braintheria?',
+    answer:
+      'Not at all! Sign in with Google, claim free BRAIN from the faucet, and start asking or answering questions. The complex blockchain stuff happens behind the scenes. For crypto-native users, you can connect your own wallet and track all transactions on-chain.',
   },
   {
     question: 'Which blockchain does Braintheria run on?',
     answer:
-      'Braintheria is built on the Base network (starting on Base Sepolia for the alpha phase). This gives you fast, low-cost transactions while still inheriting Ethereum’s security model. All bounty-related actions funding, accepting, and payouts happen on-chain.',
+      'Braintheria runs on QIE network (Chain ID: 1983). QIE offers fast transaction speeds and low gas fees, making micro-bounties practical and affordable. All bounties, answers, and payouts are recorded on-chain for full transparency.',
   },
   {
-    question: 'Who owns the content I post?',
+    question: 'Is my BRAIN token safe?',
     answer:
-      'You do. Questions and answers are anchored on-chain and the content is stored via IPFS, which means your contributions are verifiable and resistant to censorship. Braintheria acts as an interface and curator, not as the sole owner of your knowledge.',
+      'Yes! Braintheria is non-custodial - we never hold your funds. When you attach a bounty, it goes into a smart contract escrow, not our wallet. Your earnings go directly to your wallet address. You maintain full control of your tokens at all times.',
   },
   {
-    question: 'How is my identity handled? Is Braintheria custodial?',
+    question: 'What happens if no one answers my question?',
     answer:
-      'Braintheria uses a hybrid auth setup: Google OAuth for accessibility and wallet-based identity for on-chain actions. Your private keys are never held by Braintheria you control your wallet. Off-chain data like email and profile details are stored in our backend; on-chain actions are tied to your wallet address and visible on the blockchain.',
+      'If your question expires without an accepted answer, you can refund your bounty back to your wallet. The smart contract ensures your BRAIN tokens are either paid to a helpful answerer or returned to you.',
   },
 ];
 
@@ -80,7 +131,7 @@ export const testimonials = [
     name: 'Raka Pratama',
     role: 'Backend Developer',
     comment:
-      'Braintheria finally gives me a reason to write long, detailed answers. Instead of just farming upvotes, I actually earn ETH when someone accepts my solution.',
+      'Braintheria finally gives me a reason to write long, detailed answers. Instead of just farming upvotes, I actually earn BRAIN token when someone accepts my solution.',
     image: '/images/char-1.png',
   },
   {
@@ -101,7 +152,7 @@ export const testimonials = [
     name: 'Aulia Rahman',
     role: 'Web3 Community Lead',
     comment:
-      'Braintheria fits perfectly into our Discord community. Members ask questions, attach bounties, and we can see transparent payouts instead of vague ‘thanks bro’ replies.',
+      'Braintheria fits perfectly into our Discord community. Members ask questions, attach bounties, and we can see transparent payouts instead of vague replies.',
     image: '/images/char-4.png',
   },
   {
@@ -115,14 +166,14 @@ export const testimonials = [
     name: 'Priya Desai',
     role: 'Data Scientist',
     comment:
-      'I’ve answered niche ML questions that would normally get ignored elsewhere. On Braintheria, those questions come with bounties, so niche knowledge is finally rewarded.',
+      'I have answered niche ML questions that would normally get ignored elsewhere. On Braintheria, those questions come with bounties, so niche knowledge is finally rewarded.',
     image: '/images/char-8.png',
   },
   {
     name: 'Andre Santos',
     role: 'DevOps Engineer',
     comment:
-      'What I like most is the trustless settlement. When my answer is accepted, the bounty goes straight to my wallet—no waiting, no negotiation, no hidden platform cuts.',
+      'What I like most is the trustless settlement. When my answer is accepted, the bounty goes straight to my wallet - no waiting, no negotiation, no hidden platform cuts.',
     image: '/images/char-7.png',
   },
   {
@@ -143,7 +194,7 @@ export const testimonials = [
     name: 'Maya Al-Hassan',
     role: 'Web3 Content Creator',
     comment:
-      'I love that my answers aren’t just trapped in one platform. With IPFS and on-chain records, my content feels portable, permanent, and truly mine.',
+      'I love that my answers are not just trapped in one platform. With IPFS and on-chain records, my content feels portable, permanent, and truly mine.',
     image: '/images/char-10.png',
   },
 ];
