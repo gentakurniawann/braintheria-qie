@@ -1,8 +1,7 @@
 
 # 🧠 Braintheria — Decentralized Q&A with QIE Bounties
 
-Braintheria is a **decentralized Question & Answer platform** where users can post questions with a **QIE bounty**, and answerers compete to earn rewards.
-Unlike traditional Q&A platforms, Braintheria uses **smart contracts as trustless escrow**, ensuring transparent payouts without intermediaries.
+Braintheria is a decentralized Question & Answer platform where users can post questions with a BRAIN token bounty, and answerers compete to earn rewards. Unlike traditional Q&A platforms, Braintheria uses smart contracts as trustless escrow, ensuring transparent payouts without intermediaries. Built on qee Network for low-cost transactions and powered by our native BRAIN token for flexible economics, the platform was developed using Solidity, Next.js, and NestJS.
 
 Built for a hackathon using **QIE Network**, **Solidity**, **Next.js**, and an optional backend for indexing and UX improvements.
 ---
