@@ -83,7 +83,7 @@ const PaginationPrevious = ({
   <PaginationLink
     aria-label="Go to previous page"
     size="default"
-    className={cn('gap-1 pl-2.5', className)}
+    className={cn('gap-1 pl-2.5 hover:bg-white/0', className)}
     {...props}
   >
     <Button
@@ -101,7 +101,7 @@ const PaginationNext = ({ className, ...props }: React.ComponentProps<typeof Pag
   <PaginationLink
     aria-label="Go to next page"
     size="default"
-    className={cn('gap-1 pr-2.5', className)}
+    className={cn('gap-1 pr-2.5 hover:bg-white/0', className)}
     {...props}
   >
     <Button
@@ -145,7 +145,7 @@ const PaginationCompo = ({
     if (totalPages <= 10) return 2;
     if (totalPages <= 20) return 3;
     if (totalPages <= 50) return 5;
-    return Math.floor(totalPages / 10); 
+    return Math.floor(totalPages / 10);
   };
 
   const jumpSize = calculateJumpSize();
@@ -161,7 +161,7 @@ const PaginationCompo = ({
 
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const visiblePages = 5; 
+    const visiblePages = 5;
 
     let startPage = Math.max(1, page - Math.floor(visiblePages / 2));
     let endPage = startPage + visiblePages - 1;
