@@ -25,10 +25,16 @@ export class QuestionsService {
     private ledgerService: LedgerService,
   ) {}
 
-  // Create question + send on-chain tx (optional bounty)
+  // Create question with BRAIN bounty
+  // Flow: User approves contract → Backend calls askQuestionOnBehalf → Contract pulls BRAIN from user
   async create(
     user: { id: number; walletAddress: string },
-    dto: { title: string; bodyMd: string; bounty?: number; files?: any[] },
+    dto: {
+      title: string;
+      bodyMd: string;
+      bounty?: number;
+      files?: any[];
+    },
   ) {
     const contentHash = this.hashing.computeContentHash(dto.bodyMd);
     const pinned = await this.ipfs.pinJson({
@@ -38,7 +44,16 @@ export class QuestionsService {
     });
 
     const bountyEth = dto.bounty ?? 0;
-    const bountyWei = ethers.parseEther(bountyEth.toString()); // bigint
+
+    // Minimum bounty validation: must be at least 10 BRAIN (or 0 for no bounty)
+    const MINIMUM_BOUNTY = 10;
+    if (bountyEth > 0 && bountyEth < MINIMUM_BOUNTY) {
+      throw new BadRequestException(
+        `Minimum bounty is ${MINIMUM_BOUNTY} BRAIN. You provided ${bountyEth} BRAIN.`,
+      );
+    }
+
+    const bountyWei = ethers.parseEther(bountyEth.toString());
 
     // Create DB row first
     const question = await this.prisma.question.create({
@@ -55,56 +70,65 @@ export class QuestionsService {
     let txHash: string | undefined = undefined;
     let chainQId: number | null = null;
 
+    // If bounty > 0, create question on-chain using askQuestionOnBehalf
+    // This pulls BRAIN directly from user's wallet (they must approve contract first)
     if (bountyEth > 0) {
-      const tokenAddress = ethers.ZeroAddress;
-      const deadlineSeconds = Math.floor(Date.now() / 1000) + 86400;
+      const tokenAddress = this.signerService.brainTokenAddress;
+      const deadlineSeconds = Math.floor(Date.now() / 1000) + 86400 * 7; // 7 days
       const uri = `ipfs://${pinned.cid}`;
 
       try {
-        const {
-          tx,
-          receipt,
-          chainQId: emittedQId,
-        } = await this.signerService.askQuestion(
-          tokenAddress,
-          bountyWei,
-          deadlineSeconds,
-          uri,
-        );
+        // Create question on behalf of user - contract will pull BRAIN from user
+        const { tx, chainQId: emittedQId } =
+          await this.signerService.askQuestionOnBehalf(
+            user.walletAddress, // User's wallet address
+            tokenAddress,
+            bountyWei,
+            deadlineSeconds,
+            uri,
+          );
         txHash = tx.hash;
         chainQId = emittedQId ?? null;
 
+        // Log to ledger
         await this.ledgerService.addEntry({
           userId: user.id,
           questionId: question.id,
           kind: 'BountyEscrowed',
           amountWei: bountyWei.toString(),
-          txHash, //string | undefined
-          token: 'ETH',
+          txHash,
+          token: 'BRAIN',
         });
       } catch (error) {
-        console.error('Error sending askQuestion tx:', error);
-        throw new BadRequestException('Failed to send askQuestion transaction');
+        console.error('Error in askQuestionOnBehalf:', error);
+        throw new BadRequestException(
+          'Failed to create question on-chain. Make sure you have approved the contract to spend your BRAIN tokens.',
+        );
       }
     }
 
+    // Update question with on-chain data
     const updated = await this.prisma.question.update({
       where: { id: question.id },
       data: {
         txHash,
         chainQId,
-        bountyAmountWei: bountyEth > 0 ? bountyWei.toString() : '0',
+        bountyAmountWei: bountyWei.toString(),
       },
     });
 
     publish('question:created', { id: updated.id });
 
-    // Read live bounty from chain using chainQId
+    // Read live bounty from chain
     let bountyOnChain = '0';
     if (updated.chainQId != null) {
-      bountyOnChain = (
-        await this.chainRead.bountyOf(updated.chainQId)
-      ).toString();
+      try {
+        bountyOnChain = (
+          await this.chainRead.bountyOf(updated.chainQId)
+        ).toString();
+      } catch (error) {
+        console.warn('Failed to read bounty from chain:', error);
+      }
     }
 
     return { ...updated, bountyWei: bountyOnChain };
@@ -251,7 +275,7 @@ export class QuestionsService {
     });
   }
 
-  async update(id: number, dto: UpdateQuestionDto) {
+  async update(id: number, dto: UpdateQuestionDto, userWallet?: string) {
     const question = await this.prisma.question.findUnique({ where: { id } });
     if (!question) throw new NotFoundException('Question not found.');
     if (question.status !== 'Open')
@@ -268,27 +292,45 @@ export class QuestionsService {
     // === BOUNTY HANDLING ===
     if (dto.bounty !== undefined) {
       const newBountyEth = parseFloat(dto.bounty);
+
+      // Minimum bounty validation: must be at least 10 BRAIN (or 0)
+      const MINIMUM_BOUNTY = 10;
+      if (newBountyEth > 0 && newBountyEth < MINIMUM_BOUNTY) {
+        throw new BadRequestException(
+          `Minimum bounty is ${MINIMUM_BOUNTY} BRAIN. You provided ${newBountyEth} BRAIN.`,
+        );
+      }
+
       const newBountyWei = BigInt(Math.floor(newBountyEth * 1e18));
       const oldBountyWei = BigInt(question.bountyAmountWei || '0');
 
       if (newBountyWei > oldBountyWei) {
-        // 🟢 Increase bounty on-chain
+        // 🟢 Increase bounty - User must have approved contract first
         const addWei = newBountyWei - oldBountyWei;
         if (!question.chainQId)
           throw new BadRequestException('Question not yet on-chain.');
+        if (!userWallet)
+          throw new BadRequestException(
+            'User wallet required for increasing bounty.',
+          );
 
-        await this.signerService.fundMore(Number(question.chainQId), addWei);
+        // Pull additional BRAIN from user wallet
+        await this.signerService.addBountyOnBehalf(
+          userWallet,
+          Number(question.chainQId),
+          addWei,
+        );
 
         updateData.bountyAmountWei = newBountyWei.toString();
       } else if (newBountyWei < oldBountyWei) {
-        // 🔴 Reduce bounty on-chain
-        const reduceWei = oldBountyWei - newBountyWei;
+        // 🔴 Reduce bounty on-chain - refunds to asker (stored in contract)
         if (!question.chainQId)
           throw new BadRequestException('Question not yet on-chain.');
 
+        // Note: reduceBounty in contract refunds to q.asker which is user wallet
         await this.signerService.reduceBounty(
           Number(question.chainQId),
-          reduceWei,
+          newBountyWei, // Pass new amount, not diff
         );
 
         updateData.bountyAmountWei = newBountyWei.toString();
@@ -500,7 +542,7 @@ export class QuestionsService {
           kind: 'BountyRelease',
           amountWei: question.bountyAmountWei,
           txHash: txReceipt.hash,
-          token: 'ETH',
+          token: 'BRAIN',
         },
       });
 

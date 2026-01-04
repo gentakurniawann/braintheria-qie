@@ -23,6 +23,18 @@ export const QNA_ABI = [
     ],
     outputs: [],
   },
+  //  NEW: Answer question on behalf of user (records user's wallet as answerer)
+  {
+    type: 'function',
+    name: 'answerQuestionOnBehalf',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'answerer', type: 'address' },
+      { name: 'questionId', type: 'uint256' },
+      { name: 'uri', type: 'string' },
+    ],
+    outputs: [{ type: 'uint256' }],
+  },
   {
     type: 'function',
     name: 'acceptAnswer',
@@ -44,6 +56,20 @@ export const QNA_ABI = [
     ],
     outputs: [],
   },
+  //  NEW: Ask question on behalf of user (pulls BRAIN from user wallet)
+  {
+    type: 'function',
+    name: 'askQuestionOnBehalf',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'asker', type: 'address' },
+      { name: 'token', type: 'address' },
+      { name: 'bounty', type: 'uint256' },
+      { name: 'deadline', type: 'uint40' },
+      { name: 'uri', type: 'string' },
+    ],
+    outputs: [{ type: 'uint256' }],
+  },
   {
     type: 'function',
     name: 'addBounty',
@@ -51,6 +77,29 @@ export const QNA_ABI = [
     inputs: [
       { name: 'questionId', type: 'uint256' },
       { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  //  NEW: Add bounty on behalf of user (pulls BRAIN from user wallet)
+  {
+    type: 'function',
+    name: 'addBountyOnBehalf',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'funder', type: 'address' },
+      { name: 'questionId', type: 'uint256' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  //  NEW: Reduce bounty as admin (refunds to user wallet)
+  {
+    type: 'function',
+    name: 'reduceBountyAsAdmin',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'questionId', type: 'uint256' },
+      { name: 'newAmount', type: 'uint256' },
     ],
     outputs: [],
   },
@@ -64,6 +113,14 @@ export const QNA_ABI = [
   {
     type: 'function',
     name: 'cancelQuestion',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'questionId', type: 'uint256' }],
+    outputs: [],
+  },
+  //  NEW: Cancel question as admin (refunds to user wallet)
+  {
+    type: 'function',
+    name: 'cancelQuestionAsAdmin',
     stateMutability: 'nonpayable',
     inputs: [{ name: 'questionId', type: 'uint256' }],
     outputs: [],

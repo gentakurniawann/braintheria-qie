@@ -18,6 +18,7 @@ import {
 import { QuestionsService } from './questions.service';
 import { AskDto } from '../dto/ask.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
 import { UsersService } from 'src/users/users.service';
 import { ChainReadService } from 'src/chain/chain-read.service';
 import { UpdateQuestionDto } from '../dto/update-question.dto';
@@ -81,7 +82,7 @@ export class QuestionsController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   async list(
     @Query('page') page = 1,
     @Query('limit') limit = 10,
@@ -108,7 +109,7 @@ export class QuestionsController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   async getById(@Param('id') id: string, @Req() req?: Request) {
     const userId = (req as any)?.user?.id || (req as any)?.user?.sub;
     return this.svc.getById(Number(id), userId);
@@ -133,7 +134,8 @@ export class QuestionsController {
     if (question.status !== 'Open')
       throw new BadRequestException('Only open questions can be edited.');
 
-    return this.svc.update(Number(id), dto);
+    // Pass user wallet for bounty updates
+    return this.svc.update(Number(id), dto, user.primaryWallet ?? undefined);
   }
 
   @Delete(':id')
