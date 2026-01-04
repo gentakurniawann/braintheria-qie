@@ -28,7 +28,7 @@ export type TResponseMe = {
 export interface TWalletBalance {
   address: string;
   wei: string;
-  eth: string;
+  qie: string;
 }
 
 export interface TWalletResponse {

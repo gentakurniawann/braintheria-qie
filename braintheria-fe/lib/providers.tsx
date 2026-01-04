@@ -10,7 +10,9 @@ import { qieTestnet } from './chains/qie-testnet';
 
 const ModalSuccess = dynamic(() => import('@/components/global/modal-success'), { ssr: false });
 const ModalDelete = dynamic(() => import('@/components/global/modal-delete'), { ssr: false });
+const SwapToken = dynamic(() => import('@/components/global/dialog/swap-token'), { ssr: false });
 
+import { Toaster } from '@/components/ui/sonner';
 import useTheme from '@/stores/theme';
 import useAuth from '@/stores/auth';
 
@@ -43,6 +45,7 @@ export default function RootProviders({
           <RainbowKitProvider>
             <ModalSuccess />
             <ModalDelete />
+            <SwapToken />
             <div className="relative w-full h-full">
               {isLoading && (
                 <div className="w-full min-h-full flex items-center justify-center bg-gray-500/60 z-50 absolute">
@@ -52,6 +55,7 @@ export default function RootProviders({
               {children}
             </div>
           </RainbowKitProvider>
+          <Toaster richColors/>
         </NuqsAdapter>
       </TanstackQueryProvider>
     </WagmiProvider>

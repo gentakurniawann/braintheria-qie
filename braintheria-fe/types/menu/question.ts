@@ -37,8 +37,7 @@ export interface IQuestion {
 export interface IQuestionPayload {
   title?: string;
   bodyMd: string;
-  bounty: string;
-  token: string;
+  bounty?: string; // Amount in BRAIN tokens (as string for form)
   id?: string;
 }
 

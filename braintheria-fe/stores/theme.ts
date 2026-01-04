@@ -19,6 +19,7 @@ const useTheme = create<IThemeStore>((set) => ({
     action: () => {},
   },
   modalQuestion: false,
+  modalSwapToken: false,
 
   // actions
   setLoading: (loading) => {
@@ -41,6 +42,9 @@ const useTheme = create<IThemeStore>((set) => ({
   },
   setModalQuestion: (open) => {
     set({ modalQuestion: open });
+  },
+  setModalSwapToken: (open) => {
+    set({ modalSwapToken: open });
   },
 }));
 

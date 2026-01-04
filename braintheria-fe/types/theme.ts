@@ -20,10 +20,12 @@ export interface IThemeStore {
   modalSuccess: IModalSuccess;
   modalQuestion: boolean;
   modalDelete: IModalDelete;
+  modalSwapToken: boolean;
   setLoading: (loading: boolean) => void;
   setModalSuccess: (params: IModalSuccess) => void;
   setModalQuestion: (open: boolean) => void;
   setModalDelete: (modal: IModalDelete) => void;
+  setModalSwapToken: (open: boolean) => void;
 }
 
 // Response type

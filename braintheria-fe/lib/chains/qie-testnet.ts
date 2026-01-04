@@ -17,3 +17,8 @@ export const qieTestnet = defineChain({
   },
   testnet: true,
 });
+
+export const BRAIN_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_BRAIN_TOKEN_ADDRESS;
+
+// QnAWithBounty Contract - User must approve this contract to spend their BRAIN
+export const QNA_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_QNA_CONTRACT_ADDRESS;
