@@ -35,11 +35,53 @@ contract QnAWithBounty is QnAAsk, QnAAnswer, QnAAdmin, ReentrancyGuard {
         return questionId;
     }
 
+    /**
+     * @notice Ask a question on behalf of a user (only owner/backend can call)
+     * @dev User must approve this contract to spend their BRAIN tokens first
+     * @param asker The actual user who is asking the question
+     * @param token Token address for bounty payment
+     * @param bounty Bounty amount in wei
+     * @param deadline Deadline timestamp
+     * @param uri IPFS URI for question content
+     */
+    function askQuestionOnBehalf(
+        address asker,
+        address token,
+        uint256 bounty,
+        uint40 deadline,
+        string calldata uri
+    ) external onlyOwner whenNotPaused nonReentrant returns (uint256) {
+        require(asker != address(0), "Invalid asker");
+        
+        // Call internal logic with asker as the question owner
+        uint256 questionId = _askQuestionOnBehalf(asker, token, bounty, deadline, uri);
+
+        emit QuestionAsked(questionId, asker, bounty, uri);
+
+        return questionId;
+    }
+
     function answerQuestion(
         uint256 questionId,
         string calldata uri
     ) external whenNotPaused {
         _postAnswer(questionId, uri);
+    }
+
+    /**
+     * @notice Answer a question on behalf of a user (only owner/backend can call)
+     * @dev Records the actual user's wallet as the answerer so bounty goes to them
+     * @param answerer The actual user who is answering the question
+     * @param questionId ID of the question to answer
+     * @param uri IPFS URI for answer content
+     */
+    function answerQuestionOnBehalf(
+        address answerer,
+        uint256 questionId,
+        string calldata uri
+    ) external onlyOwner whenNotPaused returns (uint256) {
+        require(answerer != address(0), "Invalid answerer");
+        return _postAnswerOnBehalf(answerer, questionId, uri);
     }
 
     /**
@@ -82,10 +124,39 @@ contract QnAWithBounty is QnAAsk, QnAAnswer, QnAAdmin, ReentrancyGuard {
         _addBounty(questionId, amount);
     }
 
+    /**
+     * @notice Add bounty on behalf of a user (only owner/backend can call)
+     * @dev User must approve this contract to spend their BRAIN tokens first
+     * @param funder The user who is funding the additional bounty
+     * @param questionId ID of the question
+     * @param amount Amount to add to bounty
+     */
+    function addBountyOnBehalf(
+        address funder,
+        uint256 questionId,
+        uint256 amount
+    ) external onlyOwner whenNotPaused nonReentrant {
+        require(funder != address(0), "Invalid funder");
+        _addBountyOnBehalf(funder, questionId, amount);
+    }
+
     function reduceBounty(
         uint256 questionId,
         uint256 newAmount
     ) external nonReentrant onlyAsker(questionId) {
+        _reduceBounty(questionId, newAmount);
+    }
+
+    /**
+     * @notice Reduce bounty as admin - only contract owner (backend) can call this
+     * @dev Refunds the difference to the original asker's wallet
+     * @param questionId ID of the question
+     * @param newAmount New bounty amount (lower than current)
+     */
+    function reduceBountyAsAdmin(
+        uint256 questionId,
+        uint256 newAmount
+    ) external onlyOwner nonReentrant {
         _reduceBounty(questionId, newAmount);
     }
 
@@ -99,6 +170,17 @@ contract QnAWithBounty is QnAAsk, QnAAnswer, QnAAdmin, ReentrancyGuard {
     function cancelQuestion(
         uint256 questionId
     ) external onlyAsker(questionId) nonReentrant {
+        _cancelQuestion(questionId);
+    }
+
+    /**
+     * @notice Cancel question as admin - only contract owner (backend) can call this
+     * @dev Refunds bounty to the original asker's wallet
+     * @param questionId ID of the question
+     */
+    function cancelQuestionAsAdmin(
+        uint256 questionId
+    ) external onlyOwner nonReentrant {
         _cancelQuestion(questionId);
     }
 

@@ -41,6 +41,33 @@ abstract contract QnAAnswer is QnAStorage {
         emit AnswerPosted(questionId, answerId, msg.sender, uri);
     }
 
+    /**
+     * @notice Internal function to post answer on behalf of a user
+     * @dev Records the actual user's wallet as answerer so bounty goes to them
+     * @param answerer The actual user who is answering
+     * @param questionId ID of the question
+     * @param uri IPFS URI for answer content
+     */
+    function _postAnswerOnBehalf(
+        address answerer,
+        uint256 questionId,
+        string calldata uri
+    ) internal returns (uint256 answerId) {
+        Question storage q = questions[questionId];
+        require(q.status == QuestionStatus.Open, "Not open");
+        require(block.timestamp < q.deadline, "Expired");
+
+        answerId = ++q.answersCount;
+        Answer storage a = answers[questionId][answerId];
+        a.answerer = answerer;  // Use actual user's wallet, not msg.sender
+        a.createdAt = uint40(block.timestamp);
+        a.uri = uri;
+
+        answersPosted[answerer] += 1;
+
+        emit AnswerPosted(questionId, answerId, answerer, uri);
+    }
+
     function _acceptAnswer(uint256 questionId, uint256 answerId) internal {
         Question storage q = questions[questionId];
         require(q.status == QuestionStatus.Open, "Not open");

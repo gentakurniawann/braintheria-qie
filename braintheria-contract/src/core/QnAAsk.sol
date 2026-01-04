@@ -105,6 +105,61 @@ abstract contract QnAAsk is QnAStorage {
     }
 
     /**
+     * @notice Internal function to create a question on behalf of a user
+     * @dev Pulls ERC20 tokens directly from the asker's wallet (they must approve first)
+     * @param asker The actual user who is asking the question
+     * @param token Token address (only ERC20 supported, not native ETH)
+     * @param bounty Bounty amount in wei
+     * @param deadline Unix timestamp when question expires
+     * @param uri IPFS or metadata URI for question content
+     */
+    function _askQuestionOnBehalf(
+        address asker,
+        address token,
+        uint256 bounty,
+        uint40 deadline,
+        string calldata uri
+    ) internal returns (uint256 questionId) {
+        require(
+            deadline >= block.timestamp + MIN_DEADLINE_DELAY,
+            "Deadline too soon"
+        );
+        require(token != address(0), "Only ERC20 tokens for onBehalf");
+        
+        questionId = ++questionCounter;
+
+        // Pull tokens directly from asker (they must have approved this contract)
+        if (bounty > 0) {
+            IERC20(token).safeTransferFrom(
+                asker,
+                address(this),
+                bounty
+            );
+        }
+
+        // Store question data with asker as the owner
+        Question storage q = questions[questionId];
+        q.asker = asker;
+        q.token = token;
+        q.bounty = bounty;
+        q.createdAt = uint40(block.timestamp);
+        q.deadline = deadline;
+        q.status = QuestionStatus.Open;
+        q.uri = uri;
+
+        questionsAsked[asker] += 1;
+
+        emit QuestionAsked(
+            questionId,
+            asker,
+            token,
+            bounty,
+            deadline,
+            uri
+        );
+    }
+
+    /**
      * @notice Internal function to add bounty to existing question
      * @param questionId ID of the question
      * @param amount Additional bounty amount
@@ -127,6 +182,30 @@ abstract contract QnAAsk is QnAStorage {
         emit BountyAdded(questionId, amount, token);
     }
 
+    /**
+     * @notice Internal function to add bounty on behalf of a user
+     * @dev Pulls ERC20 tokens directly from the funder's wallet (they must approve first)
+     * @param funder The user funding the additional bounty
+     * @param questionId ID of the question
+     * @param amount Amount to add to bounty
+     */
+    function _addBountyOnBehalf(
+        address funder,
+        uint256 questionId,
+        uint256 amount
+    ) internal {
+        require(amount > 0, "No amount");
+        Question storage q = questions[questionId];
+        require(q.status == QuestionStatus.Open, "Not open");
+        require(q.token != address(0), "Only ERC20 tokens for onBehalf");
+
+        // Pull tokens from funder (they must have approved this contract)
+        IERC20(q.token).safeTransferFrom(funder, address(this), amount);
+
+        q.bounty += amount;
+        emit BountyAdded(questionId, amount, q.token);
+    }
+
     function _reduceBounty(uint256 questionId, uint256 newAmount) internal {
         Question storage q = questions[questionId];
         require(q.status == QuestionStatus.Open, "Question not open");
@@ -135,13 +214,14 @@ abstract contract QnAAsk is QnAStorage {
         uint256 refund = q.bounty - newAmount;
         address token = q.token;
 
+        // Refund to the question asker (not msg.sender, which could be admin)
         if (token == address(0)) {
             // refund in native ETH
-            (bool success, ) = payable(msg.sender).call{value: refund}("");
+            (bool success, ) = payable(q.asker).call{value: refund}("");
             require(success, "Refund failed");
         } else {
             // refund in ERC20 token
-            IERC20(token).safeTransfer(msg.sender, refund);
+            IERC20(token).safeTransfer(q.asker, refund);
         }
 
         uint256 oldBounty = q.bounty;
@@ -149,7 +229,7 @@ abstract contract QnAAsk is QnAStorage {
 
         emit BountyReduced(
             questionId,
-            msg.sender,
+            q.asker,
             oldBounty,
             newAmount,
             refund
