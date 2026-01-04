@@ -6,10 +6,9 @@
 
 ## 🎯 **Executive Summary**
 
-Braintheria is a decentralized Q&A platform that transforms knowledge sharing from unpaid labor into a sustainable economic model. By leveraging QIE tokens and smart contract escrow, we enable experts to earn fair compensation for quality answers while providing askers with fast, reliable solutions. Unlike traditional platforms that extract 20-40% fees and operate on opaque algorithms, Braintheria ensures 98-100% of bounties reach experts through trustless, transparent blockchain transactions.
-
+Braintheria is a decentralized Q&A platform that transforms knowledge sharing from unpaid labor into a sustainable economic model. By leveraging BRAIN tokens and smart contract escrow, we enable experts to earn fair compensation for quality answers while providing askers with fast, reliable solutions. Unlike traditional platforms that extract 20-40% fees and operate on opaque algorithms, Braintheria ensures 98-100% of bounties reach experts through trustless, transparent blockchain transactions.
+Key Innovation: We monetize the $50B expert knowledge market that Stack Overflow proved exists but cannot capture, while solving the trust and fee problems that plague traditional freelance platforms.
 **Key Innovation:** We monetize the $50B expert knowledge market that Stack Overflow proved exists but cannot capture, while solving the trust and fee problems that plague traditional freelance platforms.
-
 ---
 
 ## 📊 **Problem Statement**
@@ -157,10 +156,10 @@ Braintheria is a full-stack decentralized Q&A platform that combines the reach o
 ### **Core Features**
 
 #### **1. Question Bounty System** 💰
-- **How it works:** Askers post questions and lock QIE tokens as bounty in smart contract escrow
-- **Bounty range:** 10 QIE ($2.50) for simple questions to 10,000+ QIE ($2,500+) for complex solutions
-- **Trust mechanism:** Funds are immutably locked until asker selects winner
-- **Transparency:** Every bounty transaction is auditable on blockchain explorer
+- **How it works**: Askers post questions and lock BRAIN tokens as bounty in smart contract escrow
+- **Bounty range**: 10 BRAIN ($2.50) for simple questions to 10,000+ BRAIN ($2,500+) for complex solutions
+- **Trust mechanism**: Funds are immutably locked until asker selects winner
+- **Transparency**: Every bounty transaction is auditable on blockchain explorer
 
 #### **2. Competitive Answer Marketplace** 🧠
 - **Multiple answers:** Unlimited experts can submit solutions to same question
