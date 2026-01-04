@@ -5,11 +5,9 @@
 ---
 
 ## 🎯 **Executive Summary**
-
 Braintheria is a decentralized Q&A platform that transforms knowledge sharing from unpaid labor into a sustainable economic model. By leveraging BRAIN tokens and smart contract escrow, we enable experts to earn fair compensation for quality answers while providing askers with fast, reliable solutions. Unlike traditional platforms that extract 20-40% fees and operate on opaque algorithms, Braintheria ensures 98-100% of bounties reach experts through trustless, transparent blockchain transactions.
 Key Innovation: We monetize the $50B expert knowledge market that Stack Overflow proved exists but cannot capture, while solving the trust and fee problems that plague traditional freelance platforms.
 **Key Innovation:** We monetize the $50B expert knowledge market that Stack Overflow proved exists but cannot capture, while solving the trust and fee problems that plague traditional freelance platforms.
----
 
 ## 📊 **Problem Statement**
 
