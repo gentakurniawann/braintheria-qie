@@ -13,6 +13,7 @@ import { ChainModule } from './chain/chain.module';
 import { IpfsModule } from './ipfs/ipfs.module';
 import { HashingModule } from './hashing/hashing.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
+import { FaucetSwapModule } from './faucet-swap/faucet-swap.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module';
     IpfsModule,
     HashingModule,
     LeaderboardModule,
+    FaucetSwapModule,
   ],
 })
 export class AppModule {}
