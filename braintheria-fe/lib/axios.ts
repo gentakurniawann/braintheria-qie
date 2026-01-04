@@ -52,7 +52,8 @@ const createAxiosInstance = () => {
     },
     (error) => {
       useTheme.getState().setLoading(false);
-      return handleAxiosError(error);
+      handleAxiosError(error);
+      return Promise.reject(error);
     },
   );
   return instance;
