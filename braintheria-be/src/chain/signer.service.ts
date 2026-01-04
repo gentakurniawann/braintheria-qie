@@ -2,36 +2,69 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ethers } from 'ethers';
 import { QNA_ABI } from './qna.abi';
+import { BRAIN_TOKEN_ABI } from './brain.abi';
 
 @Injectable()
 export class SignerService {
   private provider: ethers.JsonRpcProvider;
   private signer: ethers.Wallet;
   contract: ethers.Contract;
+  brainTokenContract: ethers.Contract;
+  brainTokenAddress: string;
 
   constructor() {
     // Connect to blockchain node
     const rpcUrl = process.env.RPC_URL;
     const privateKey = process.env.SERVER_SIGNER_PRIVATE_KEY;
     const contractAddress = process.env.CONTRACT_ADDRESS;
+    const brainTokenAddress = process.env.BRAIN_TOKEN_ADDRESS;
 
     if (!rpcUrl) throw new Error('RPC_URL missing in .env');
     if (!privateKey)
       throw new Error('SERVER_SIGNER_PRIVATE_KEY missing in .env');
     if (!contractAddress) throw new Error('CONTRACT_ADDRESS missing in .env');
+    if (!brainTokenAddress)
+      throw new Error('BRAIN_TOKEN_ADDRESS missing in .env');
 
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.signer = new ethers.Wallet(privateKey, this.provider);
     this.contract = new ethers.Contract(contractAddress, QNA_ABI, this.signer);
+    this.brainTokenContract = new ethers.Contract(
+      brainTokenAddress,
+      BRAIN_TOKEN_ABI,
+      this.signer,
+    );
+    this.brainTokenAddress = brainTokenAddress;
+  }
 
-    // console.log('🔍 ENV VALUES AT SIGNER START:', {
-    //   RPC_URL: process.env.RPC_URL,
-    //   SERVER_SIGNER_PRIVATE_KEY: process.env.SERVER_SIGNER_PRIVATE_KEY?.slice(
-    //     0,
-    //     10,
-    //   ),
-    //   CONTRACT_ADDRESS: process.env.CONTRACT_ADDRESS,
-    // });
+  /**
+   * Get the signer/backend wallet address
+   */
+  async getSignerAddress(): Promise<string> {
+    return await this.signer.getAddress();
+  }
+
+  /**
+   * Approve QnA contract to spend BRAIN tokens
+   */
+  async approveBrainForQna(amount: bigint) {
+    const contractAddress = process.env.CONTRACT_ADDRESS;
+    const tx = await this.brainTokenContract.approve(contractAddress, amount);
+    const receipt = await tx.wait();
+    return receipt;
+  }
+
+  /**
+   * Get current allowance for QnA contract
+   */
+  async getBrainAllowance(): Promise<bigint> {
+    const contractAddress = process.env.CONTRACT_ADDRESS;
+    const signerAddress = await this.signer.getAddress();
+    const allowance = await this.brainTokenContract.allowance(
+      signerAddress,
+      contractAddress,
+    );
+    return BigInt(allowance);
   }
 
   // Optional debugging connection info
@@ -48,7 +81,9 @@ export class SignerService {
   }
 
   /**
-   * Ask a new question on-chain with optional ETH bounty.
+   * Ask a new question on-chain with optional bounty (QIE or BRAIN).
+   * If tokenAddress is ZeroAddress, bounty is in native token (QIE).
+   * If tokenAddress is set, bounty is in ERC20 token (e.g., BRAIN).
    */
   async askQuestion(
     tokenAddress: string,
@@ -57,9 +92,8 @@ export class SignerService {
     uri: string,
   ) {
     try {
-      // console.log(' Sending askQuestion tx...');
-      // console.log(this.contract);
-      // console.log('Contract address:', this.contract.address);
+      // For ERC20 tokens, don't send value with transaction
+      const isNativeToken = tokenAddress === ethers.ZeroAddress;
 
       const tx = await this.contract.askQuestion(
         tokenAddress,
@@ -67,7 +101,7 @@ export class SignerService {
         deadline,
         uri,
         {
-          value: bountyWei,
+          value: isNativeToken ? bountyWei : 0n,
           gasLimit: 3_000_000,
         },
       );
@@ -117,6 +151,69 @@ export class SignerService {
     }
   }
 
+  /**
+   * Ask a question on behalf of a user.
+   * This pulls BRAIN tokens directly from the user's wallet (they must have approved first).
+   * @param askerAddress The user's wallet address
+   * @param tokenAddress The BRAIN token address
+   * @param bountyWei Bounty amount in wei
+   * @param deadline Deadline timestamp
+   * @param uri IPFS URI
+   */
+  async askQuestionOnBehalf(
+    askerAddress: string,
+    tokenAddress: string,
+    bountyWei: bigint,
+    deadline: number,
+    uri: string,
+  ) {
+    try {
+      const tx = await this.contract.askQuestionOnBehalf(
+        askerAddress,
+        tokenAddress,
+        bountyWei,
+        deadline,
+        uri,
+        { gasLimit: 3_000_000 },
+      );
+
+      const receipt = await tx.wait(1);
+
+      let emittedQId: number | null = null;
+
+      // Parse logs for QuestionAsked event
+      if (
+        receipt &&
+        receipt.status === 1 &&
+        receipt.logs &&
+        receipt.logs.length > 0
+      ) {
+        for (const log of receipt.logs) {
+          try {
+            const parsed = this.contract.interface.parseLog(log);
+            if (parsed && parsed.name === 'QuestionAsked') {
+              emittedQId = Number(parsed.args[0]);
+              break;
+            }
+          } catch {
+            // skip unrelated logs
+          }
+        }
+      }
+
+      if (emittedQId === null) {
+        console.warn('⚠️ Could not extract questionId from events');
+      }
+
+      return { tx, receipt, chainQId: emittedQId };
+    } catch (err) {
+      console.error('❌ askQuestionOnBehalf failed:', err);
+      throw new BadRequestException(
+        'Failed to create question on behalf of user',
+      );
+    }
+  }
+
   async fundMore(chainQId: number, addWei: bigint) {
     // Call the contract's addBounty function instead of fundMore
     const tx = await this.contract.addBounty(chainQId, addWei, {
@@ -127,14 +224,101 @@ export class SignerService {
     return await tx.wait();
   }
 
-  async reduceBounty(chainQId: number, reduceWei: bigint) {
-    const tx = await this.contract.reduceBounty(chainQId, reduceWei);
+  /**
+   * Reduce bounty as admin - refunds difference to user wallet (q.asker)
+   */
+  async reduceBounty(chainQId: number, newAmount: bigint) {
+    const tx = await this.contract.reduceBountyAsAdmin(chainQId, newAmount);
     return await tx.wait();
   }
 
+  /**
+   * Add bounty on behalf of a user.
+   * This pulls BRAIN tokens directly from the user's wallet (they must have approved first).
+   * @param funderAddress The user's wallet address who is funding
+   * @param chainQId The question ID on chain
+   * @param addWei Amount to add in wei
+   */
+  async addBountyOnBehalf(
+    funderAddress: string,
+    chainQId: number,
+    addWei: bigint,
+  ) {
+    try {
+      const tx = await this.contract.addBountyOnBehalf(
+        funderAddress,
+        BigInt(chainQId),
+        addWei,
+        { gasLimit: 500_000 },
+      );
+
+      const receipt = await tx.wait(1);
+      return { tx, receipt };
+    } catch (err) {
+      console.error('❌ addBountyOnBehalf failed:', err);
+      throw new BadRequestException(
+        'Failed to add bounty. Make sure you have approved the contract to spend your BRAIN tokens.',
+      );
+    }
+  }
+
+  /**
+   * Cancel question as admin - refunds bounty to user wallet (q.asker)
+   */
   async cancelQuestion(chainQId: number) {
-    const tx = await this.contract.cancelQuestion(chainQId);
+    const tx = await this.contract.cancelQuestionAsAdmin(chainQId);
     return await tx.wait();
+  }
+
+  /**
+   * Answer a question on behalf of a user.
+   * This records the actual user's wallet as the answerer so bounty goes to them.
+   * @param answererAddress The user's wallet address (who will receive bounty)
+   * @param chainQId The question ID on chain
+   * @param uri IPFS URI for answer content
+   */
+  async answerQuestionOnBehalf(
+    answererAddress: string,
+    chainQId: number,
+    uri: string,
+  ) {
+    try {
+      const tx = await this.contract.answerQuestionOnBehalf(
+        answererAddress,
+        BigInt(chainQId),
+        uri,
+        { gasLimit: 1_000_000 },
+      );
+
+      const receipt = await tx.wait(1);
+
+      let emittedAId: number | null = null;
+
+      // Parse logs for AnswerPosted event
+      if (
+        receipt &&
+        receipt.status === 1 &&
+        receipt.logs &&
+        receipt.logs.length > 0
+      ) {
+        for (const log of receipt.logs) {
+          try {
+            const parsed = this.contract.interface.parseLog(log);
+            if (parsed && parsed.name === 'AnswerPosted') {
+              emittedAId = Number(parsed.args[1]); // answerId is second arg
+              break;
+            }
+          } catch {
+            // skip unrelated logs
+          }
+        }
+      }
+
+      return { tx, receipt, chainAId: emittedAId };
+    } catch (err) {
+      console.error('❌ answerQuestionOnBehalf failed:', err);
+      throw new BadRequestException('Failed to post answer on-chain.');
+    }
   }
 
   /**
