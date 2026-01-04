@@ -16,11 +16,14 @@ datasource db {
 
 
 model User {
-  id             Int       @id @default(autoincrement())
-  email          String    @unique
-  name           String?
-  primaryWallet  String?
-  createdAt      DateTime  @default(now())
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
+  name             String?
+  primaryWallet    String?
+  hasClaimedFaucet Boolean   @default(false)
+  faucetClaimedAt  DateTime?
+  faucetTxHash     String?
+  createdAt        DateTime  @default(now())
 
   questions      Question[]
   answers        Answer[]
@@ -68,7 +71,7 @@ model Ledger {
   questionId  Int?
   kind        String    // 'topup' | 'fund' | 'settlement'
   amountWei   String
-  token       String    @default("ETH")
+  token       String    @default("BRAIN")
   ref         String?
   txHash      String?
   createdAt   DateTime  @default(now())
